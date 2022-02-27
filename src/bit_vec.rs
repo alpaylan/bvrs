@@ -1,3 +1,5 @@
+use bitvec::order::Msb0;
+use bitvec::vec as BitVecHelp;
 use std::fmt::{Display, Formatter};
 use std::ops::Add;
 
@@ -85,12 +87,18 @@ impl BitVec /* Operations */ {
     fn get_bool(&self, i: BVSize) -> bool {
         let pri_ind = i.to_usize() / 8;
         let snd_ind = i.to_usize() % 8;
+        let padding = if pri_ind == 0 {
+            (self.size.to_usize() - 1) % 8
+        } else {
+            7
+        };
+
         if let Some(b) = self.bv.get(pri_ind) {
-            (b.0 & (1 << snd_ind)) != 0
+            (b.0 & (0b00000001 << (padding - snd_ind))) != 0
         } else {
             println!("Rank Position Exceeds Size!");
             println!("(Position: {:?}, Size: {:?})", i, self.size);
-            panic!()
+            false
         }
     }
     pub fn get_u8(&self, i: BVSize) -> u8 {
@@ -100,6 +108,28 @@ impl BitVec /* Operations */ {
     fn concat(&self, other: &Self) -> Self {
         let bv = [self.clone().bv, other.clone().bv].concat();
         let size = BVSize::from(ByteSize(bv.len()));
+        Self { bv, size }
+    }
+    pub fn extract(&self, left: usize, right: usize) -> Self {
+        if left > right || right >= self.size.to_usize() {
+            panic!()
+        }
+        let bytes: Vec<u8> = self.bv.clone().into_iter().map(|x| x.get_bits()).collect();
+        let bitvec: BitVecHelp::BitVec<u8, Msb0> = BitVecHelp::BitVec::from_vec(bytes);
+        let (left_mid_part, right_part) = bitvec.split_at(right);
+        let (left_part, mid_part) = left_mid_part.split_at(left);
+        let bv: Vec<Byte> = Vec::from(mid_part.to_bitvec().as_raw_slice().to_vec())
+            .into_iter()
+            .map(|x| Byte(x))
+            .collect();
+        println!("Left and Right are ({}, {})", left, right);
+        println!("BitVec: {}", bitvec);
+        println!("LeftMid: {}", left_mid_part);
+        println!("Right: {}", right_part);
+        println!("Left: {}", left_part);
+        println!("Mid: {}", mid_part);
+        println!("BV: {:?}", bv);
+        let size = BVSize(right - left);
         Self { bv, size }
     }
     // Ops
@@ -144,6 +174,15 @@ impl Add for BitVec {
     }
 }
 
+impl Display for BitVec {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "BitVec({}): [", self.size.to_usize());
+        for byte in &self.bv[..self.bv.len() - 1] {
+            write!(f, "{:08b} ", byte.get_bits());
+        }
+        write!(f, "{:08b}]", self.bv[self.bv.len() - 1].get_bits())
+    }
+}
 #[cfg(test)]
 mod essentials_test {
     #[test]
