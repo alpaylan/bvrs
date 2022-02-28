@@ -96,8 +96,8 @@ impl BitVec /* Operations */ {
         if let Some(b) = self.bv.get(pri_ind) {
             (b.0 & (0b00000001 << (padding - snd_ind))) != 0
         } else {
-            println!("Rank Position Exceeds Size!");
-            println!("(Position: {:?}, Size: {:?})", i, self.size);
+            // println!("Rank Position Exceeds Size!");
+            // println!("(Position: {:?}, Size: {:?})", i, self.size);
             false
         }
     }
@@ -111,26 +111,14 @@ impl BitVec /* Operations */ {
         Self { bv, size }
     }
     pub fn extract(&self, left: usize, right: usize) -> Self {
-        if left > right || right >= self.size.to_usize() {
+        if left > right || right > self.size.to_usize() {
             panic!()
         }
-        let bytes: Vec<u8> = self.bv.clone().into_iter().map(|x| x.get_bits()).collect();
-        let bitvec: BitVecHelp::BitVec<u8, Msb0> = BitVecHelp::BitVec::from_vec(bytes);
-        let (left_mid_part, right_part) = bitvec.split_at(right);
-        let (left_part, mid_part) = left_mid_part.split_at(left);
-        let bv: Vec<Byte> = Vec::from(mid_part.to_bitvec().as_raw_slice().to_vec())
-            .into_iter()
-            .map(|x| Byte(x))
-            .collect();
-        println!("Left and Right are ({}, {})", left, right);
-        println!("BitVec: {}", bitvec);
-        println!("LeftMid: {}", left_mid_part);
-        println!("Right: {}", right_part);
-        println!("Left: {}", left_part);
-        println!("Mid: {}", mid_part);
-        println!("BV: {:?}", bv);
-        let size = BVSize(right - left);
-        Self { bv, size }
+        let mut val = 0;
+        for i in left..right {
+            val += 2_i32.pow((right - i - 1) as u32) * self.get_u8(BVSize(i)) as i32;
+        }
+        BitVec::from_u64(val as u64, BVSize(right - left))
     }
     // Ops
     fn incr(self) -> Self {

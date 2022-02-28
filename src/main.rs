@@ -11,20 +11,28 @@ use std::fmt::{Display, Formatter};
 use std::vec::Vec;
 
 fn main() {
-    let mut b = BitVec::new_with_random(256);
+    let mut b = BitVec::new_with_random(16);
     let bp = BitVec::new_with_vec(vec![0b00110000; 2]);
     let r = RankSupport::new(&b);
-    let i = 8;
+    let i = 0;
     let res = RankSupport::dummy_rankn(&b, i);
+
+    for i in 0..16 {
+        println!("<============= Rank [{}] Starts ==============>", i);
+        println!("BV = {}", b);
+        let v = r.rank1(i);
+        println!("Rank = {}", v);
+        println!("<============= Rank [{}] Ends ==============>\n", i);
+    }
     let res2 = r.rank1(i as u64);
     println!("BV as binary {}", b);
     // println!("BV as decimal {:?}", b);
     // println!("Rb {:?}", r.rs);
     // println!("Rr {:?}", r.rb);
     // println!("Rp {:?}", r.rp);
-    println!("Rank {} is {}", i, res);
+    // println!("Rank {} is {}", i, res);
     println!("Rank {} is {}", i, res2);
-    println!("Size {}", r.overhead())
+    // println!("Size {}", r.overhead())
 }
 
 // #[cfg(test)]

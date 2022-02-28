@@ -38,6 +38,7 @@ impl<'bv> RankSupport<'bv> /* Data Structure Construction */ {
         let log2n = (bv.size.to_usize() as f64).log2();
         let super_block_size = BVSize((log2n * log2n / 2.0).ceil() as usize);
         let block_size = BVSize((log2n / 2.0).ceil() as usize);
+        println!("Blocksize: {:?}", block_size);
         let block_space = BVSize(((super_block_size.to_usize()) as f64).log2().ceil() as usize);
         let vec_size = rs.len();
         let sub_vec_size = log2n.ceil() as usize;
@@ -71,16 +72,16 @@ impl<'bv> RankSupport<'bv> /* Data Structure Construction */ {
     }
     fn compute_rp(bv: &BitVec) -> Vec<Vec<BitVec>> {
         let log2n = (bv.size.to_usize() as f64).log2();
-        let super_block_size = BVSize((log2n * log2n / 2.0).ceil() as usize);
+        let super_block_size = (log2n * log2n / 2.0).ceil() as usize;
         let block_size = (log2n / 2.0).ceil() as usize;
-        let block_space = ((super_block_size.to_usize()) as f64).log2().ceil() as usize;
-        let lookup_table_size = 2_usize.pow(block_space as u32);
+        let block_space = (super_block_size as f64).log2().ceil() as usize;
+        let lookup_table_size = 2_usize.pow(block_size as u32);
         let mut lookup_table: Vec<Vec<u64>> = Vec::with_capacity(lookup_table_size);
         for _ in 0..lookup_table_size {
-            lookup_table.push(Vec::with_capacity(block_space));
+            lookup_table.push(Vec::with_capacity(block_size));
         }
         for i in 0..lookup_table_size {
-            for j in 0..block_space {
+            for j in 0..block_size {
                 // println!("Round (i: {}) (j: {})", i, j);
                 let temp_bv = BitVec::from_u64(i as u64, BVSize(block_space));
                 let rank = RankSupport::dummy_rankn(&temp_bv, j);
@@ -117,30 +118,32 @@ impl<'bv> RankSupport<'bv> /* Public API */ {
         rank
     }
     pub fn rank1(&self, i: u64) -> u64 {
-        let log2n = (self.bv.size.to_usize() as f64).log2();
-        let super_block_size = ((log2n * log2n / 2.0).ceil() as usize);
-        println!("SuperBlockSize: {}", super_block_size);
-        let block_size = (log2n / 2.0).ceil() as usize;
-        println!("BlockSize: {}", block_size);
+        let super_block_size =
+            (self.bv.size.to_usize() as f64 / self.rs.len() as f64).ceil() as usize;
+        let block_size = super_block_size / self.rb[0].len();
+        // let block_size = (log2n / 2.0).ceil() as usize;
         let super_block_index = (i as usize / super_block_size) as usize;
         let i = i as usize % super_block_size;
         let block_index = (i / block_size) as usize;
+        // println!("Let's Debug");
+        // print!("SuperBlockSize : {} || \t", super_block_size);
+        // print!("SuperBlockIndex : {} || \t", super_block_index);
+        // print!("BlockSize : {} || \t", block_size);
+        // println!("BlockIndex : {}", block_index);
         let lookup_rank_index = i % block_size;
         let value_from_super_block = self.rs[super_block_index].to_u64();
         let value_from_block = self.rb[super_block_index][block_index].to_u64();
-        // println!("RB: {:?}", self.rb);
         let left = super_block_index * super_block_size + block_index * block_size;
         let right = left + block_size;
         let lookup_row_index = self.bv.extract(left, right).to_u64() as usize;
         println!(
-            "Lookup Row: {} | Lookup Rank: {}",
-            lookup_row_index, lookup_rank_index
+            "Extracted({}, {}) {} - Index - {}",
+            left,
+            right,
+            self.bv.extract(left, right),
+            lookup_row_index
         );
         let value_from_lookup = self.rp[lookup_row_index][lookup_rank_index].to_u64();
-        println!(
-            "(SuperBlockValue: {})     (BlockValue: {})        (LookupValue: {})",
-            value_from_super_block, value_from_block, value_from_lookup
-        );
         value_from_super_block + value_from_block + value_from_lookup
     }
     pub fn overhead(self) -> usize {
