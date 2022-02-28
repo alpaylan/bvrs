@@ -168,7 +168,7 @@ impl<'bv> RankSupport<'bv> /* Public API */ {
 
         value_from_super_block + value_from_block + value_from_lookup
     }
-    pub fn overhead(self) -> usize {
+    pub fn overhead(&self) -> usize {
         std::mem::size_of_val(&*self.rs)
             + std::mem::size_of_val(&*self.rb)
             + std::mem::size_of_val(&*self.rp)

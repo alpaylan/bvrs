@@ -1,5 +1,3 @@
-use easybench::{bench, bench_env};
-
 #[cfg(test)]
 mod rank1_benchmarks {
     use crate::bit_vec::BitVec;
