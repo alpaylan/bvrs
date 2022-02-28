@@ -1,8 +1,28 @@
+#![allow(unused_must_use)]
 use crate::bit_vec::*;
-use std::path::Component::Prefix;
+use serde::{Deserialize, Serialize};
+use serde_json;
+use std::fs::File;
+use std::io::prelude::*;
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct RankSupportCopy {
+    pub(crate) rs: Vec<BitVec>,
+    pub(crate) rb: Vec<Vec<BitVec>>,
+    pub(crate) rp: Vec<Vec<BitVec>>,
+}
+impl RankSupportCopy {
+    fn new(r: &RankSupport) -> RankSupportCopy {
+        RankSupportCopy {
+            rs: r.rs.clone(),
+            rb: r.rb.clone(),
+            rp: r.rp.clone(),
+        }
+    }
+}
+#[derive(Debug, Clone)]
 pub struct RankSupport<'bv> {
-    bv: &'bv BitVec,
+    pub(crate) bv: &'bv BitVec,
     pub(crate) rs: Vec<BitVec>,
     pub(crate) rb: Vec<Vec<BitVec>>,
     pub(crate) rp: Vec<Vec<BitVec>>,
@@ -46,7 +66,7 @@ impl<'bv> RankSupport<'bv> /* Data Structure Construction */ {
         let mut blocks: Vec<Vec<u64>> = Vec::with_capacity(vec_size);
         for i in 0..vec_size {
             blocks.push(Vec::with_capacity(sub_vec_size));
-            for j in 0..sub_vec_size {
+            for _ in 0..sub_vec_size {
                 blocks[i].push(0);
             }
         }
@@ -103,26 +123,30 @@ impl<'bv> RankSupport<'bv> /* Data Structure Construction */ {
 impl<'bv> RankSupport<'bv> /* Public API */ {
     pub fn new(bit_vec: &BitVec) -> RankSupport {
         let bv = bit_vec;
-        let rs = RankSupport::compute_rs(&bv);
-        let rb = RankSupport::compute_rb(&bv, &rs);
-        let rp = RankSupport::compute_rp(&bv);
+        let rs = vec![];
+        let rb = vec![];
+        let rp = vec![];
         RankSupport { bv, rs, rb, rp }
     }
+    pub fn compute_index(&mut self) {
+        self.rs = RankSupport::compute_rs(self.bv);
+        self.rb = RankSupport::compute_rb(self.bv, &self.rs);
+        self.rp = RankSupport::compute_rp(self.bv);
+    }
     pub fn dummy_rank1(&self, i: u64) -> u64 {
-        unimplemented!()
+        todo!()
     }
     pub fn dummy_rankn(bv: &BitVec, i: usize) -> u64 {
         let mut rank = 0;
         for ind in 0..=i {
             rank += bv.get(BVSize(ind)) as u64;
         }
-        // println!("Dummy Rank({}, {}) = {}", bv, i, rank);
         rank
     }
     pub fn rank1(&self, i: u64) -> u64 {
         let log2n = (self.bv.size.to_usize() as f64).log2();
-        let super_block_size = ((log2n * log2n / 2.0).ceil() as usize);
-        let block_size = ((log2n / 2.0).ceil() as usize);
+        let super_block_size = (log2n * log2n / 2.0).ceil() as usize;
+        let block_size = (log2n / 2.0).ceil() as usize;
         // println!("SuperBlockSize: {}", super_block_size);
         // println!("BlockSize: {}", block_size);
         let super_block_index = (i as usize / super_block_size) as usize;
@@ -149,11 +173,22 @@ impl<'bv> RankSupport<'bv> /* Public API */ {
             + std::mem::size_of_val(&*self.rb)
             + std::mem::size_of_val(&*self.rp)
     }
-    pub fn save(file_name: &str) {
-        unimplemented!()
+    pub fn save(&self, file_name: &str) -> std::io::Result<()> {
+        let rc = RankSupportCopy::new(self);
+        let serialized_rc = serde_json::to_string(&rc)?;
+        let mut file = File::create(file_name)?;
+        file.write_all(serialized_rc.as_bytes())?;
+        Ok(())
     }
-    pub fn load(file_name: &str) {
-        unimplemented!()
+    pub fn load(&mut self, file_name: &str) -> std::io::Result<()> {
+        let mut file = File::open(file_name)?;
+        let mut contents = String::new();
+        file.read_to_string(&mut contents)?;
+        let deserialized_rc: RankSupportCopy = serde_json::from_str(&contents)?;
+        self.rb = deserialized_rc.rb;
+        self.rs = deserialized_rc.rs;
+        self.rp = deserialized_rc.rp;
+        Ok(())
     }
 }
 
@@ -166,7 +201,8 @@ mod rank1_tests {
         for i in 1..=128 {
             let size = i * 8;
             let b = BitVec::new_with_random(size);
-            let r = RankSupport::new(&b);
+            let mut r = RankSupport::new(&b);
+            r.compute_index();
             for j in 0..b.size.to_usize() {
                 let dummy_res = RankSupport::dummy_rankn(&b, j);
                 let smart_res = r.rank1(j as u64);
@@ -187,7 +223,8 @@ mod rank1_tests {
         for i in 128..=160 {
             let size = i * 128;
             let b = BitVec::new_with_random(size);
-            let r = RankSupport::new(&b);
+            let mut r = RankSupport::new(&b);
+            r.compute_index();
             for j in (0..b.size.to_usize()).step_by(80) {
                 // println!("Test {} {}", i, j);
                 let dummy_res = RankSupport::dummy_rankn(&b, j);
@@ -209,7 +246,8 @@ mod rank1_tests {
         for i in 256..=280 {
             let size = i * 128;
             let b = BitVec::new_with_random(size);
-            let r = RankSupport::new(&b);
+            let mut r = RankSupport::new(&b);
+            r.compute_index();
             for j in (0..b.size.to_usize()).step_by(250) {
                 // println!("Test {} {}", i, j);
                 let dummy_res = RankSupport::dummy_rankn(&b, j);
@@ -231,7 +269,8 @@ mod rank1_tests {
         {
             let size = 40960;
             let b = BitVec::new_with_random(size);
-            let r = RankSupport::new(&b);
+            let mut r = RankSupport::new(&b);
+            r.compute_index();
             for j in (0..b.size.to_usize()).step_by(250) {
                 let dummy_res = RankSupport::dummy_rankn(&b, j);
                 let smart_res = r.rank1(j as u64);
@@ -249,7 +288,8 @@ mod rank1_tests {
         {
             let size = 51200;
             let b = BitVec::new_with_random(size);
-            let r = RankSupport::new(&b);
+            let mut r = RankSupport::new(&b);
+            r.compute_index();
             for j in (0..b.size.to_usize()).step_by(250) {
                 let dummy_res = RankSupport::dummy_rankn(&b, j);
                 let smart_res = r.rank1(j as u64);
@@ -267,7 +307,8 @@ mod rank1_tests {
         {
             let size = 61440;
             let b = BitVec::new_with_random(size);
-            let r = RankSupport::new(&b);
+            let mut r = RankSupport::new(&b);
+            r.compute_index();
             for j in (0..b.size.to_usize()).step_by(250) {
                 let dummy_res = RankSupport::dummy_rankn(&b, j);
                 let smart_res = r.rank1(j as u64);
@@ -281,6 +322,50 @@ mod rank1_tests {
                     size, j, b, smart_res, dummy_res, size, j
                 );
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod save_load_tests {
+    use crate::bit_vec::BitVec;
+    use crate::rank_support::RankSupport;
+    #[test]
+    fn simple_test() {
+        {
+            let size = 128;
+            let b = BitVec::new_with_random(size);
+            let mut r = RankSupport::new(&b);
+            r.compute_index();
+            r.save("example.txt");
+            let mut r2 = RankSupport::new(&b);
+            r2.load("example.txt");
+            for j in 0..b.size.to_usize() {
+                let dummy_res = RankSupport::dummy_rankn(&b, j);
+                let smart_res = r2.rank1(j as u64);
+                assert_eq!(
+                    dummy_res, smart_res,
+                    "<============= Case [size: {}, point: {}] Starts ==============>\n \
+                    BV = {}\n\
+                    Rank = {}\n\
+                    Dummy Rank = {}\n\
+                    <============= Case [size: {}, point: {}] Ends ==============>\n",
+                    size, j, b, smart_res, dummy_res, size, j
+                );
+            }
+        }
+    }
+    #[test]
+    fn fail_test_file_not_found() {
+        {
+            let size = 128;
+            let b = BitVec::new_with_random(size);
+            let mut r = RankSupport::new(&b);
+            r.compute_index();
+            r.save("example.txt");
+            let mut r2 = RankSupport::new(&b);
+            let res = r2.load("example2.txt");
+            assert!(res.is_err());
         }
     }
 }

@@ -1,13 +1,13 @@
-use bitvec::order::Msb0;
-use bitvec::vec as BitVecHelp;
+#![allow(unused_must_use)]
+use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::ops::Add;
 
-#[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub struct ByteSize(pub usize);
-#[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub struct BVSize(pub usize);
-#[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub struct Byte(pub u8);
 
 impl Byte {
@@ -43,7 +43,7 @@ impl ByteSize {
         self.0 as u64
     }
 }
-#[derive(Debug, Clone, PartialOrd, PartialEq, Ord, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialOrd, PartialEq, Ord, Eq)]
 pub struct BitVec {
     pub bv: Vec<Byte>,
     pub size: BVSize,
@@ -134,7 +134,7 @@ impl BitVec /* Transform to u64 */ {
             self.clone()
         } else {
             let remain = 8 - size;
-            let mut zeros: BitVec = BitVec::new_with_zeros(ByteSize(remain).into());
+            let zeros: BitVec = BitVec::new_with_zeros(ByteSize(remain).into());
             BitVec::concat(&zeros, &self)
         }
     }
