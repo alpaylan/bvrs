@@ -92,7 +92,6 @@ impl BitVec /* Operations */ {
         } else {
             7
         };
-
         if let Some(b) = self.bv.get(pri_ind) {
             (b.0 & (0b00000001 << (padding - snd_ind))) != 0
         } else {
@@ -111,7 +110,9 @@ impl BitVec /* Operations */ {
         Self { bv, size }
     }
     pub fn extract(&self, left: usize, right: usize) -> Self {
-        if left > right || right > self.size.to_usize() {
+        if left > right
+        /* || right > self.size.to_usize() */
+        {
             panic!()
         }
         let mut val = 0;
