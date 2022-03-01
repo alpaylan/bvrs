@@ -1,11 +1,12 @@
 use crate::rank_support::RankSupport;
-
+use std::borrow::Cow;
+#[derive(Clone)]
 pub(crate) struct SelectSupport<'bv> {
-    pub(crate) r: &'bv RankSupport<'bv>,
+    pub(crate) r: Cow<'bv, RankSupport<'bv>>,
 }
 
 impl<'bv> SelectSupport<'bv> {
-    pub(crate) fn new(r: &'bv RankSupport<'bv>) -> SelectSupport<'bv> {
+    pub(crate) fn new(r: Cow<'bv, RankSupport<'bv>>) -> SelectSupport<'bv> {
         SelectSupport { r }
     }
     // pub fn compute_index(&mut self) {
@@ -75,8 +76,8 @@ mod select1_tests {
         for i in 1..=128 {
             let size = i * 8;
             let b = BitVec::new_with_random(size);
-            let r = RankSupport::new_with_index_computation(&b);
-            let s = SelectSupport::new(&r);
+            let r = RankSupport::new_with_index_computation(std::borrow::Cow::Borrowed(&b));
+            let s = SelectSupport::new(std::borrow::Cow::Borrowed(&r));
             for j in 1..b.size {
                 let dummy_res = SelectSupport::dummy_selectn(&s, j);
                 let smart_res = s.select1(j as u64);

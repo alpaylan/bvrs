@@ -3,6 +3,7 @@
 use crate::bit_vec::*;
 use serde::{Deserialize, Serialize};
 use serde_json;
+use std::borrow::{Borrow, Cow};
 use std::error::Error;
 use std::fs::File;
 use std::io::prelude::*;
@@ -24,7 +25,7 @@ impl RankSupportCopy {
 }
 #[derive(Debug, Clone)]
 pub struct RankSupport<'bv> {
-    pub(crate) bv: &'bv BitVec,
+    pub(crate) bv: Cow<'bv, BitVec>,
     pub(crate) rs: Vec<BitVec>,
     pub(crate) rb: Vec<Vec<BitVec>>,
     pub(crate) rp: Vec<Vec<BitVec>>,
@@ -122,22 +123,22 @@ impl<'bv> RankSupport<'bv> /* Data Structure Construction */ {
     }
 }
 impl<'bv> RankSupport<'bv> /* Public API */ {
-    pub fn new(bit_vec: &BitVec) -> RankSupport {
+    pub fn new(bit_vec: Cow<'bv, BitVec>) -> RankSupport {
         let bv = bit_vec;
         let rs = vec![];
         let rb = vec![];
         let rp = vec![];
         RankSupport { bv, rs, rb, rp }
     }
-    pub fn new_with_index_computation(bit_vec: &BitVec) -> RankSupport {
+    pub fn new_with_index_computation(bit_vec: Cow<'bv, BitVec>) -> RankSupport {
         let bv = bit_vec;
-        let rs = RankSupport::compute_rs(bit_vec);
-        let rb = RankSupport::compute_rb(bit_vec, &rs);
-        let rp = RankSupport::compute_rp(bit_vec);
+        let rs = RankSupport::compute_rs(bv.borrow());
+        let rb = RankSupport::compute_rb(bv.borrow(), &rs);
+        let rp = RankSupport::compute_rp(bv.borrow());
         RankSupport { bv, rs, rb, rp }
     }
     pub fn new_with_load(
-        bit_vec: &'bv BitVec,
+        bit_vec: Cow<'bv, BitVec>,
         file_name: String,
     ) -> Result<RankSupport<'bv>, Box<dyn Error>> {
         let bv = bit_vec;
@@ -151,9 +152,9 @@ impl<'bv> RankSupport<'bv> /* Public API */ {
         Ok(RankSupport { bv, rs, rb, rp })
     }
     pub fn compute_index(&mut self) {
-        self.rs = RankSupport::compute_rs(self.bv);
-        self.rb = RankSupport::compute_rb(self.bv, &self.rs);
-        self.rp = RankSupport::compute_rp(self.bv);
+        self.rs = RankSupport::compute_rs(self.bv.borrow());
+        self.rb = RankSupport::compute_rb(self.bv.borrow(), &self.rs);
+        self.rp = RankSupport::compute_rp(self.bv.borrow());
     }
     pub fn dummy_rank1(&self, i: u64) -> u64 {
         todo!()
@@ -223,7 +224,7 @@ mod rank1_tests {
         for i in 1..=128 {
             let size = i * 8;
             let b = BitVec::new_with_random(size);
-            let mut r = RankSupport::new(&b);
+            let mut r = RankSupport::new(std::borrow::Cow::Borrowed(&b));
             r.compute_index();
             for j in 0..b.size {
                 let dummy_res = RankSupport::dummy_rankn(&b, j);
@@ -245,7 +246,7 @@ mod rank1_tests {
         for i in 1..=128 {
             let size = i * 8;
             let b = BitVec::new_with_random(size);
-            let r = RankSupport::new_with_index_computation(&b);
+            let r = RankSupport::new_with_index_computation(std::borrow::Cow::Borrowed(&b));
             for j in 0..b.size {
                 let dummy_res = RankSupport::dummy_rankn(&b, j);
                 let smart_res = r.rank1(j as u64);
@@ -266,7 +267,7 @@ mod rank1_tests {
         for i in 128..=160 {
             let size = i * 128;
             let b = BitVec::new_with_random(size);
-            let mut r = RankSupport::new(&b);
+            let mut r = RankSupport::new(std::borrow::Cow::Borrowed(&b));
             r.compute_index();
             for j in (0..b.size).step_by(80) {
                 // println!("Test {} {}", i, j);
@@ -289,7 +290,7 @@ mod rank1_tests {
         for i in 256..=280 {
             let size = i * 128;
             let b = BitVec::new_with_random(size);
-            let mut r = RankSupport::new(&b);
+            let mut r = RankSupport::new(std::borrow::Cow::Borrowed(&b));
             r.compute_index();
             for j in (0..b.size).step_by(250) {
                 // println!("Test {} {}", i, j);
@@ -312,7 +313,7 @@ mod rank1_tests {
         {
             let size = 40960;
             let b = BitVec::new_with_random(size);
-            let mut r = RankSupport::new(&b);
+            let mut r = RankSupport::new(std::borrow::Cow::Borrowed(&b));
             r.compute_index();
             for j in (0..b.size).step_by(250) {
                 let dummy_res = RankSupport::dummy_rankn(&b, j);
@@ -331,7 +332,7 @@ mod rank1_tests {
         {
             let size = 51200;
             let b = BitVec::new_with_random(size);
-            let mut r = RankSupport::new(&b);
+            let mut r = RankSupport::new(std::borrow::Cow::Borrowed(&b));
             r.compute_index();
             for j in (0..b.size).step_by(250) {
                 let dummy_res = RankSupport::dummy_rankn(&b, j);
@@ -350,7 +351,7 @@ mod rank1_tests {
         {
             let size = 61440;
             let b = BitVec::new_with_random(size);
-            let mut r = RankSupport::new(&b);
+            let mut r = RankSupport::new(std::borrow::Cow::Borrowed(&b));
             r.compute_index();
             for j in (0..b.size).step_by(250) {
                 let dummy_res = RankSupport::dummy_rankn(&b, j);
@@ -378,10 +379,10 @@ mod save_load_tests {
         {
             let size = 128;
             let b = BitVec::new_with_random(size);
-            let mut r = RankSupport::new(&b);
+            let mut r = RankSupport::new(std::borrow::Cow::Borrowed(&b));
             r.compute_index();
             r.save("example.txt");
-            let mut r2 = RankSupport::new(&b);
+            let mut r2 = RankSupport::new(std::borrow::Cow::Borrowed(&b));
             r2.load("example.txt");
             for j in 0..b.size {
                 let dummy_res = RankSupport::dummy_rankn(&b, j);
@@ -403,10 +404,10 @@ mod save_load_tests {
         {
             let size = 128;
             let b = BitVec::new_with_random(size);
-            let mut r = RankSupport::new(&b);
+            let mut r = RankSupport::new(std::borrow::Cow::Borrowed(&b));
             r.compute_index();
             r.save("example.txt");
-            let mut r2 = RankSupport::new(&b);
+            let mut r2 = RankSupport::new(std::borrow::Cow::Borrowed(&b));
             let res = r2.load("example2.txt");
             assert!(res.is_err());
         }
@@ -417,9 +418,13 @@ mod save_load_tests {
             let size = 128;
             let b = BitVec::new_with_random(size);
             let b = b.clone();
-            let r = RankSupport::new_with_index_computation(&b);
+            let r = RankSupport::new_with_index_computation(std::borrow::Cow::Borrowed(&b));
             r.save("example1.txt");
-            let r2 = RankSupport::new_with_load(&b, "example1.txt".to_owned()).unwrap();
+            let r2 = RankSupport::new_with_load(
+                std::borrow::Cow::Borrowed(&b),
+                "example1.txt".to_owned(),
+            )
+            .unwrap();
             for j in 0..b.size {
                 let dummy_res = RankSupport::dummy_rankn(&b, j);
                 let smart_res = r2.rank1(j as u64);

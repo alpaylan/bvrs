@@ -10,7 +10,7 @@ mod rank1_benchmarks {
         for i in 1..=84 {
             let size = i * i * 8;
             let b = BitVec::new_with_random(size);
-            let mut r = RankSupport::new(&b);
+            let mut r = RankSupport::new(std::borrow::Cow::Borrowed(&b));
             r.compute_index();
             let overhead = r.overhead();
             overheads.push((size, overhead, size as f64 / overhead as f64));
@@ -28,7 +28,7 @@ mod rank1_benchmarks {
         for i in 1..=84 {
             let size = i * i * 8;
             let b = BitVec::new_with_random(size);
-            let mut r = RankSupport::new(&b);
+            let mut r = RankSupport::new(std::borrow::Cow::Borrowed(&b));
             r.compute_index();
             println!(
                 "Bench({}) = {}",
