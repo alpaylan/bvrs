@@ -48,7 +48,7 @@ impl BitVec /* Essentials */ {
     pub fn new(size: usize) -> Self {
         BitVec::new_with_zeros(size)
     }
-    fn new_with_zeros(size: usize) -> Self {
+    pub fn new_with_zeros(size: usize) -> Self {
         let byte_size = ByteSize((size as f64 / 8.0_f64).ceil() as usize);
         let mut bv = Vec::with_capacity(byte_size.to_usize());
         for _ in 0..byte_size.0 {
@@ -62,9 +62,6 @@ impl BitVec /* Essentials */ {
         BitVec { bv, size }
     }
     pub fn new_with_random(size: usize) -> Self {
-        BitVec::new_with_random_(size)
-    }
-    fn new_with_random_(size: usize) -> Self {
         let byte_size = ByteSize::from(BitVecSize(size));
         let mut bv = Vec::with_capacity(byte_size.to_usize());
         for _ in 0..byte_size.to_usize() {
@@ -76,11 +73,11 @@ impl BitVec /* Essentials */ {
 impl BitVec /* Operations */ {
     // Getters
     pub fn get(&self, i: usize) -> bool {
-        self.get_bool(BitVecSize(i))
+        self.get_bool(i)
     }
-    fn get_bool(&self, i: BitVecSize) -> bool {
-        let pri_ind = i.to_usize() / 8;
-        let snd_ind = i.to_usize() % 8;
+    fn get_bool(&self, i: usize) -> bool {
+        let pri_ind = i / 8;
+        let snd_ind = i % 8;
         let padding = if pri_ind == 0 { (self.size - 1) % 8 } else { 7 };
         if let Some(b) = self.bv.get(pri_ind) {
             (b & (0b00000001 << (padding - snd_ind))) != 0
@@ -91,15 +88,15 @@ impl BitVec /* Operations */ {
         }
     }
     pub fn get_u8(&self, i: usize) -> u8 {
-        self.get_bool(BitVecSize(i)) as u8
+        self.get_bool(i) as u8
     }
     // Setters
     pub fn set(&mut self, i: usize, b: bool) {
-        self.set_bool(BitVecSize(i), b);
+        self.set_bool(i, b);
     }
-    fn set_bool(&mut self, i: BitVecSize, b: bool) {
-        let pri_ind = i.to_usize() / 8;
-        let snd_ind = i.to_usize() % 8;
+    fn set_bool(&mut self, i: usize, b: bool) {
+        let pri_ind = i / 8;
+        let snd_ind = i % 8;
         let padding = if pri_ind == 0 { (self.size - 1) % 8 } else { 7 };
         if let Some(b) = self.bv.get(pri_ind) {
             self.bv[pri_ind] = b | (0b00000001 << (padding - snd_ind));
@@ -112,9 +109,7 @@ impl BitVec /* Operations */ {
         Self { bv, size }
     }
     pub fn extract(&self, left: usize, right: usize) -> Self {
-        if left > right
-        /* || right > self.size.to_usize() */
-        {
+        if left > right {
             panic!()
         }
         let mut val = 0;
