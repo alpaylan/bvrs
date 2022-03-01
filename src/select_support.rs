@@ -1,17 +1,17 @@
 use crate::rank_support::RankSupport;
 use crate::BVSize;
 
-struct SelectSupport<'bv> {
-    r: &'bv mut RankSupport<'bv>,
+pub(crate) struct SelectSupport<'bv> {
+    pub(crate) r: &'bv RankSupport<'bv>,
 }
 
 impl<'bv> SelectSupport<'bv> {
-    fn new(r: &'bv mut RankSupport<'bv>) -> SelectSupport<'bv> {
+    pub(crate) fn new(r: &'bv RankSupport<'bv>) -> SelectSupport<'bv> {
         SelectSupport { r }
     }
-    pub fn compute_index(&mut self) {
-        self.r.compute_index();
-    }
+    // pub fn compute_index(&mut self) {
+    //     self.r.compute_index();
+    // }
 }
 
 impl<'bv> SelectSupport<'bv> {
@@ -61,9 +61,9 @@ impl<'bv> SelectSupport<'bv> {
     pub fn save(&self, file_name: &str) -> std::io::Result<()> {
         self.r.save(file_name)
     }
-    pub fn load(&mut self, file_name: &str) -> std::io::Result<()> {
-        self.r.load(file_name)
-    }
+    // pub fn load(&mut self, file_name: &str) -> std::io::Result<()> {
+    //     self.r.load(file_name)
+    // }
 }
 
 #[cfg(test)]
@@ -76,9 +76,8 @@ mod select1_tests {
         for i in 1..=128 {
             let size = i * 8;
             let b = BitVec::new_with_random(size);
-            let mut r = RankSupport::new(&b);
-            let mut s = SelectSupport::new(&mut r);
-            s.compute_index();
+            let r = RankSupport::new_with_index_computation(&b);
+            let s = SelectSupport::new(&r);
             for j in 1..b.size.to_usize() {
                 let dummy_res = SelectSupport::dummy_selectn(&s, j);
                 let smart_res = s.select1(j as u64);

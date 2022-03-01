@@ -103,6 +103,22 @@ impl BitVec /* Operations */ {
     pub fn get_u8(&self, i: BVSize) -> u8 {
         self.get_bool(i) as u8
     }
+    // Setters
+    pub fn set(&mut self, i: usize, b: bool) {
+        self.set_bool(BVSize(i), b);
+    }
+    fn set_bool(&mut self, i: BVSize, b: bool) {
+        let pri_ind = i.to_usize() / 8;
+        let snd_ind = i.to_usize() % 8;
+        let padding = if pri_ind == 0 {
+            (self.size.to_usize() - 1) % 8
+        } else {
+            7
+        };
+        if let Some(b) = self.bv.get(pri_ind) {
+            self.bv[pri_ind] = Byte(b.0 | (0b00000001 << (padding - snd_ind)));
+        }
+    }
     // Slicing
     fn concat(&self, other: &Self) -> Self {
         let bv = [self.clone().bv, other.clone().bv].concat();

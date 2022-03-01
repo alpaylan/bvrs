@@ -1,7 +1,9 @@
 #![allow(unused_must_use)]
+
 use crate::bit_vec::*;
 use serde::{Deserialize, Serialize};
 use serde_json;
+use std::error::Error;
 use std::fs::File;
 use std::io::prelude::*;
 
@@ -128,6 +130,27 @@ impl<'bv> RankSupport<'bv> /* Public API */ {
         let rp = vec![];
         RankSupport { bv, rs, rb, rp }
     }
+    pub fn new_with_index_computation(bit_vec: &BitVec) -> RankSupport {
+        let bv = bit_vec;
+        let rs = RankSupport::compute_rs(bit_vec);
+        let rb = RankSupport::compute_rb(bit_vec, &rs);
+        let rp = RankSupport::compute_rp(bit_vec);
+        RankSupport { bv, rs, rb, rp }
+    }
+    pub fn new_with_load(
+        bit_vec: &'bv BitVec,
+        file_name: String,
+    ) -> Result<RankSupport<'bv>, Box<dyn Error>> {
+        let bv = bit_vec;
+        let mut file = File::open(file_name)?;
+        let mut contents = String::new();
+        file.read_to_string(&mut contents)?;
+        let deserialized_rc: RankSupportCopy = serde_json::from_str(&contents)?;
+        let rb = deserialized_rc.rb;
+        let rs = deserialized_rc.rs;
+        let rp = deserialized_rc.rp;
+        Ok(RankSupport { bv, rs, rb, rp })
+    }
     pub fn compute_index(&mut self) {
         self.rs = RankSupport::compute_rs(self.bv);
         self.rb = RankSupport::compute_rb(self.bv, &self.rs);
@@ -203,6 +226,27 @@ mod rank1_tests {
             let b = BitVec::new_with_random(size);
             let mut r = RankSupport::new(&b);
             r.compute_index();
+            for j in 0..b.size.to_usize() {
+                let dummy_res = RankSupport::dummy_rankn(&b, j);
+                let smart_res = r.rank1(j as u64);
+                assert_eq!(
+                    dummy_res, smart_res,
+                    "<============= Case [size: {}, point: {}] Starts ==============>\n \
+                    BV = {}\n\
+                    Rank = {}\n\
+                    Dummy Rank = {}\n\
+                    <============= Case [size: {}, point: {}] Ends ==============>\n",
+                    size, j, b, smart_res, dummy_res, size, j
+                );
+            }
+        }
+    }
+    #[test]
+    fn small_tests_two() {
+        for i in 1..=128 {
+            let size = i * 8;
+            let b = BitVec::new_with_random(size);
+            let r = RankSupport::new_with_index_computation(&b);
             for j in 0..b.size.to_usize() {
                 let dummy_res = RankSupport::dummy_rankn(&b, j);
                 let smart_res = r.rank1(j as u64);
@@ -366,6 +410,31 @@ mod save_load_tests {
             let mut r2 = RankSupport::new(&b);
             let res = r2.load("example2.txt");
             assert!(res.is_err());
+        }
+    }
+    #[test]
+    fn new_with_load_test() {
+        {
+            let size = 128;
+            let b = BitVec::new_with_random(size);
+            let b = b.clone();
+            let r = RankSupport::new_with_index_computation(&b);
+            r.save("example.txt");
+            let r2 = RankSupport::new_with_load(&b, "example.txt".to_owned()).unwrap();
+            println!("{:?}", r2);
+            for j in 0..b.size.to_usize() {
+                let dummy_res = RankSupport::dummy_rankn(&b, j);
+                let smart_res = r2.rank1(j as u64);
+                assert_eq!(
+                    dummy_res, smart_res,
+                    "<============= Case [size: {}, point: {}] Starts ==============>\n \
+                    BV = {}\n\
+                    Rank = {}\n\
+                    Dummy Rank = {}\n\
+                    <============= Case [size: {}, point: {}] Ends ==============>\n",
+                    size, j, b, smart_res, dummy_res, size, j
+                );
+            }
         }
     }
 }
