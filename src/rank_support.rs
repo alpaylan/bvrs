@@ -419,9 +419,8 @@ mod save_load_tests {
             let b = BitVec::new_with_random(size);
             let b = b.clone();
             let r = RankSupport::new_with_index_computation(&b);
-            r.save("example.txt");
-            let r2 = RankSupport::new_with_load(&b, "example.txt".to_owned()).unwrap();
-            println!("{:?}", r2);
+            r.save("example1.txt");
+            let r2 = RankSupport::new_with_load(&b, "example1.txt".to_owned()).unwrap();
             for j in 0..b.size.to_usize() {
                 let dummy_res = RankSupport::dummy_rankn(&b, j);
                 let smart_res = r2.rank1(j as u64);
