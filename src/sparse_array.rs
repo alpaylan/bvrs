@@ -9,11 +9,11 @@ struct SparseArray<'bv, T> {
     v: Vec<T>,
 }
 impl<'bv, T: Copy> SparseArray<'bv, T> {
-    fn new(size: usize) -> SparseArray<'bv, T> {
+    fn new(size: usize) -> Box<SparseArray<'bv, T>> {
         let bv = Box::new(BitVec::new(BVSize(size)));
         let r = Box::new(RankSupport::new(bv.as_ref()));
         let mut s = Box::new(SelectSupport::new(r.as_ref()));
-        SparseArray { s: s, v: vec![] }
+        Box::new(SparseArray { s: s, v: vec![] })
     }
 }
 
