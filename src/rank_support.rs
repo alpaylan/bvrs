@@ -32,12 +32,11 @@ pub struct RankSupport<'bv> {
 
 impl<'bv> RankSupport<'bv> /* Data Structure Construction */ {
     fn compute_rs(bv: &BitVec) -> Vec<BitVec> {
-        let log2n = (bv.size.to_usize() as f64).log2();
+        let log2n = (bv.size as f64).log2();
         let super_block_size = BVSize((log2n * log2n / 2.0).ceil() as usize);
         // println!("SuperBlockSize: {:?}", super_block_size);
-        let super_block_space = BVSize(((bv.size.to_usize() + 1) as f64).log2().ceil() as usize);
-        let vec_size =
-            (bv.size.to_usize() as f64 / (super_block_size.to_usize() as f64)).ceil() as usize;
+        let super_block_space = BVSize(((bv.size + 1) as f64).log2().ceil() as usize);
+        let vec_size = (bv.size as f64 / (super_block_size.to_usize() as f64)).ceil() as usize;
         let mut super_blocks: Vec<u64> = Vec::with_capacity(vec_size);
         for _ in 0..vec_size {
             super_blocks.push(0);
@@ -46,7 +45,7 @@ impl<'bv> RankSupport<'bv> /* Data Structure Construction */ {
         let mut count = 0;
         for i in 0..(vec_size - 1) {
             for j in 0..super_block_size.to_usize() {
-                count += bv.get_u8(BVSize(i * super_block_size.to_usize() + j)) as u64;
+                count += bv.get_u8(i * super_block_size.to_usize() + j) as u64;
             }
             super_blocks[i + 1] = count;
             // println!("At {}: {:?}", i, super_blocks);
@@ -54,11 +53,11 @@ impl<'bv> RankSupport<'bv> /* Data Structure Construction */ {
         // println!("SuperBlocks {:?}", super_blocks);
         super_blocks
             .iter()
-            .map(|x| BitVec::from_u64(x.clone(), super_block_space))
+            .map(|x| BitVec::from_u64(x.clone(), super_block_space.to_usize()))
             .collect()
     }
     fn compute_rb(bv: &BitVec, rs: &Vec<BitVec>) -> Vec<Vec<BitVec>> {
-        let log2n = (bv.size.to_usize() as f64).log2();
+        let log2n = (bv.size as f64).log2();
         let super_block_size = BVSize((log2n * log2n / 2.0).ceil() as usize);
         let block_size = BVSize((log2n / 2.0).ceil() as usize);
         // println!("Blocksize: {:?}", block_size);
@@ -76,9 +75,9 @@ impl<'bv> RankSupport<'bv> /* Data Structure Construction */ {
             let mut count = 0;
             for j in 0..(sub_vec_size - 1) {
                 for k in 0..block_size.to_usize() {
-                    count += bv.get_u8(BVSize(
-                        i * super_block_size.to_usize() + j * block_size.to_usize() + k,
-                    )) as u64;
+                    count += bv
+                        .get_u8(i * super_block_size.to_usize() + j * block_size.to_usize() + k)
+                        as u64;
                 }
                 blocks[i][j + 1] = count;
             }
@@ -88,13 +87,13 @@ impl<'bv> RankSupport<'bv> /* Data Structure Construction */ {
             .into_iter()
             .map(|v| {
                 v.into_iter()
-                    .map(|x| BitVec::from_u64(x.clone(), block_space))
+                    .map(|x| BitVec::from_u64(x.clone(), block_space.to_usize()))
                     .collect()
             })
             .collect()
     }
     fn compute_rp(bv: &BitVec) -> Vec<Vec<BitVec>> {
-        let log2n = (bv.size.to_usize() as f64).log2();
+        let log2n = (bv.size as f64).log2();
         let super_block_size = (log2n * log2n / 2.0).ceil() as usize;
         let block_size = (log2n / 2.0).ceil() as usize;
         let block_space = (super_block_size as f64).log2().ceil() as usize;
@@ -106,7 +105,7 @@ impl<'bv> RankSupport<'bv> /* Data Structure Construction */ {
         for i in 0..lookup_table_size {
             for j in 0..block_size {
                 // println!("Round (i: {}) (j: {})", i, j);
-                let temp_bv = BitVec::from_u64(i as u64, BVSize(block_size));
+                let temp_bv = BitVec::from_u64(i as u64, block_size);
                 let rank = RankSupport::dummy_rankn(&temp_bv, j);
                 lookup_table[i].push(rank);
             }
@@ -116,7 +115,7 @@ impl<'bv> RankSupport<'bv> /* Data Structure Construction */ {
             .into_iter()
             .map(|v| {
                 v.into_iter()
-                    .map(|x| BitVec::from_u64(x, BVSize(block_space)))
+                    .map(|x| BitVec::from_u64(x, block_space))
                     .collect()
             })
             .collect()
@@ -162,12 +161,12 @@ impl<'bv> RankSupport<'bv> /* Public API */ {
     pub fn dummy_rankn(bv: &BitVec, i: usize) -> u64 {
         let mut rank = 0;
         for ind in 0..=i {
-            rank += bv.get(BVSize(ind)) as u64;
+            rank += bv.get(ind) as u64;
         }
         rank
     }
     pub fn rank1(&self, i: u64) -> u64 {
-        let log2n = (self.bv.size.to_usize() as f64).log2();
+        let log2n = (self.bv.size as f64).log2();
         let super_block_size = (log2n * log2n / 2.0).ceil() as usize;
         let block_size = (log2n / 2.0).ceil() as usize;
         // println!("SuperBlockSize: {}", super_block_size);
@@ -226,7 +225,7 @@ mod rank1_tests {
             let b = BitVec::new_with_random(size);
             let mut r = RankSupport::new(&b);
             r.compute_index();
-            for j in 0..b.size.to_usize() {
+            for j in 0..b.size {
                 let dummy_res = RankSupport::dummy_rankn(&b, j);
                 let smart_res = r.rank1(j as u64);
                 assert_eq!(
@@ -247,7 +246,7 @@ mod rank1_tests {
             let size = i * 8;
             let b = BitVec::new_with_random(size);
             let r = RankSupport::new_with_index_computation(&b);
-            for j in 0..b.size.to_usize() {
+            for j in 0..b.size {
                 let dummy_res = RankSupport::dummy_rankn(&b, j);
                 let smart_res = r.rank1(j as u64);
                 assert_eq!(
@@ -269,7 +268,7 @@ mod rank1_tests {
             let b = BitVec::new_with_random(size);
             let mut r = RankSupport::new(&b);
             r.compute_index();
-            for j in (0..b.size.to_usize()).step_by(80) {
+            for j in (0..b.size).step_by(80) {
                 // println!("Test {} {}", i, j);
                 let dummy_res = RankSupport::dummy_rankn(&b, j);
                 let smart_res = r.rank1(j as u64);
@@ -292,7 +291,7 @@ mod rank1_tests {
             let b = BitVec::new_with_random(size);
             let mut r = RankSupport::new(&b);
             r.compute_index();
-            for j in (0..b.size.to_usize()).step_by(250) {
+            for j in (0..b.size).step_by(250) {
                 // println!("Test {} {}", i, j);
                 let dummy_res = RankSupport::dummy_rankn(&b, j);
                 let smart_res = r.rank1(j as u64);
@@ -315,7 +314,7 @@ mod rank1_tests {
             let b = BitVec::new_with_random(size);
             let mut r = RankSupport::new(&b);
             r.compute_index();
-            for j in (0..b.size.to_usize()).step_by(250) {
+            for j in (0..b.size).step_by(250) {
                 let dummy_res = RankSupport::dummy_rankn(&b, j);
                 let smart_res = r.rank1(j as u64);
                 assert_eq!(
@@ -334,7 +333,7 @@ mod rank1_tests {
             let b = BitVec::new_with_random(size);
             let mut r = RankSupport::new(&b);
             r.compute_index();
-            for j in (0..b.size.to_usize()).step_by(250) {
+            for j in (0..b.size).step_by(250) {
                 let dummy_res = RankSupport::dummy_rankn(&b, j);
                 let smart_res = r.rank1(j as u64);
                 assert_eq!(
@@ -353,7 +352,7 @@ mod rank1_tests {
             let b = BitVec::new_with_random(size);
             let mut r = RankSupport::new(&b);
             r.compute_index();
-            for j in (0..b.size.to_usize()).step_by(250) {
+            for j in (0..b.size).step_by(250) {
                 let dummy_res = RankSupport::dummy_rankn(&b, j);
                 let smart_res = r.rank1(j as u64);
                 assert_eq!(
@@ -384,7 +383,7 @@ mod save_load_tests {
             r.save("example.txt");
             let mut r2 = RankSupport::new(&b);
             r2.load("example.txt");
-            for j in 0..b.size.to_usize() {
+            for j in 0..b.size {
                 let dummy_res = RankSupport::dummy_rankn(&b, j);
                 let smart_res = r2.rank1(j as u64);
                 assert_eq!(
@@ -421,7 +420,7 @@ mod save_load_tests {
             let r = RankSupport::new_with_index_computation(&b);
             r.save("example1.txt");
             let r2 = RankSupport::new_with_load(&b, "example1.txt".to_owned()).unwrap();
-            for j in 0..b.size.to_usize() {
+            for j in 0..b.size {
                 let dummy_res = RankSupport::dummy_rankn(&b, j);
                 let smart_res = r2.rank1(j as u64);
                 assert_eq!(

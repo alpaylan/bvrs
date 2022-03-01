@@ -19,7 +19,7 @@ mod rank1_benchmarks {
     }
 
     fn run_with_rank_support(r: &RankSupport, step_size: usize) {
-        for j in (0..r.bv.size.to_usize()).step_by(step_size) {
+        for j in (0..r.bv.size).step_by(step_size) {
             let smart_res = r.rank1(j as u64);
         }
     }
@@ -41,7 +41,7 @@ mod rank1_benchmarks {
     }
 
     fn run_with_dummy_rank(b: &BitVec, step_size: usize) {
-        for j in (0..b.size.to_usize()).step_by(step_size) {
+        for j in (0..b.size).step_by(step_size) {
             let smart_res = RankSupport::dummy_rankn(b, j as usize);
         }
     }

@@ -1,5 +1,4 @@
 use crate::rank_support::RankSupport;
-use crate::BVSize;
 
 pub(crate) struct SelectSupport<'bv> {
     pub(crate) r: &'bv RankSupport<'bv>,
@@ -18,8 +17,8 @@ impl<'bv> SelectSupport<'bv> {
     pub fn dummy_selectn(&self, i: usize) -> Option<u64> {
         let mut select = 0;
         let mut expected_ones = i;
-        for ind in 0..self.r.bv.size.to_usize() {
-            expected_ones -= self.r.bv.get(BVSize(ind)) as usize;
+        for ind in 0..self.r.bv.size {
+            expected_ones -= self.r.bv.get(ind) as usize;
             if expected_ones == 0 {
                 select = ind as u64;
                 break;
@@ -32,8 +31,8 @@ impl<'bv> SelectSupport<'bv> {
         }
     }
     pub fn select1(&self, i: u64) -> Option<u64> {
-        let size = self.r.bv.size.to_usize();
-        let max_rank = self.r.rank1(self.r.bv.size.to_u64() - 1);
+        let size = self.r.bv.size;
+        let max_rank = self.r.rank1(self.r.bv.size as u64 - 1);
         if i > max_rank {
             None
         } else {
@@ -78,7 +77,7 @@ mod select1_tests {
             let b = BitVec::new_with_random(size);
             let r = RankSupport::new_with_index_computation(&b);
             let s = SelectSupport::new(&r);
-            for j in 1..b.size.to_usize() {
+            for j in 1..b.size {
                 let dummy_res = SelectSupport::dummy_selectn(&s, j);
                 let smart_res = s.select1(j as u64);
                 assert_eq!(
