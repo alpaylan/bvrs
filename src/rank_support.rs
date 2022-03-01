@@ -33,9 +33,9 @@ pub struct RankSupport<'bv> {
 impl<'bv> RankSupport<'bv> /* Data Structure Construction */ {
     fn compute_rs(bv: &BitVec) -> Vec<BitVec> {
         let log2n = (bv.size as f64).log2();
-        let super_block_size = BVSize((log2n * log2n / 2.0).ceil() as usize);
+        let super_block_size = BitVecSize((log2n * log2n / 2.0).ceil() as usize);
         // println!("SuperBlockSize: {:?}", super_block_size);
-        let super_block_space = BVSize(((bv.size + 1) as f64).log2().ceil() as usize);
+        let super_block_space = BitVecSize(((bv.size + 1) as f64).log2().ceil() as usize);
         let vec_size = (bv.size as f64 / (super_block_size.to_usize() as f64)).ceil() as usize;
         let mut super_blocks: Vec<u64> = Vec::with_capacity(vec_size);
         for _ in 0..vec_size {
@@ -58,10 +58,10 @@ impl<'bv> RankSupport<'bv> /* Data Structure Construction */ {
     }
     fn compute_rb(bv: &BitVec, rs: &Vec<BitVec>) -> Vec<Vec<BitVec>> {
         let log2n = (bv.size as f64).log2();
-        let super_block_size = BVSize((log2n * log2n / 2.0).ceil() as usize);
-        let block_size = BVSize((log2n / 2.0).ceil() as usize);
+        let super_block_size = BitVecSize((log2n * log2n / 2.0).ceil() as usize);
+        let block_size = BitVecSize((log2n / 2.0).ceil() as usize);
         // println!("Blocksize: {:?}", block_size);
-        let block_space = BVSize(((super_block_size.to_usize()) as f64).log2().ceil() as usize);
+        let block_space = BitVecSize(((super_block_size.to_usize()) as f64).log2().ceil() as usize);
         let vec_size = rs.len();
         let sub_vec_size = log2n.ceil() as usize;
         let mut blocks: Vec<Vec<u64>> = Vec::with_capacity(vec_size);

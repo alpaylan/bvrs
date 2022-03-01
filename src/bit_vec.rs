@@ -5,9 +5,9 @@ use std::ops::Add;
 #[derive(Serialize, Deserialize, Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub(in crate) struct ByteSize(pub usize);
 
-impl From<BVSize> for ByteSize {
-    fn from(b: BVSize) -> Self {
-        let BVSize(u) = b;
+impl From<BitVecSize> for ByteSize {
+    fn from(b: BitVecSize) -> Self {
+        let BitVecSize(u) = b;
         ByteSize((u as f64 / 8.0_f64).ceil() as usize)
     }
 }
@@ -21,15 +21,15 @@ impl ByteSize {
 }
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
-pub(in crate) struct BVSize(pub usize);
+pub(in crate) struct BitVecSize(pub usize);
 
-impl From<ByteSize> for BVSize {
+impl From<ByteSize> for BitVecSize {
     fn from(b: ByteSize) -> Self {
         let ByteSize(u) = b;
-        BVSize(u * 8)
+        BitVecSize(u * 8)
     }
 }
-impl BVSize {
+impl BitVecSize {
     pub fn to_usize(&self) -> usize {
         self.0
     }
@@ -57,7 +57,7 @@ impl BitVec /* Essentials */ {
         BitVec { bv, size }
     }
     pub fn new_with_vec(vec: Vec<u8>) -> Self {
-        let size = BVSize::from(ByteSize(vec.len())).to_usize();
+        let size = BitVecSize::from(ByteSize(vec.len())).to_usize();
         let bv = vec;
         BitVec { bv, size }
     }
@@ -65,7 +65,7 @@ impl BitVec /* Essentials */ {
         BitVec::new_with_random_(size)
     }
     fn new_with_random_(size: usize) -> Self {
-        let byte_size = ByteSize::from(BVSize(size));
+        let byte_size = ByteSize::from(BitVecSize(size));
         let mut bv = Vec::with_capacity(byte_size.to_usize());
         for _ in 0..byte_size.to_usize() {
             bv.push(rand::random());
@@ -76,9 +76,9 @@ impl BitVec /* Essentials */ {
 impl BitVec /* Operations */ {
     // Getters
     pub fn get(&self, i: usize) -> bool {
-        self.get_bool(BVSize(i))
+        self.get_bool(BitVecSize(i))
     }
-    fn get_bool(&self, i: BVSize) -> bool {
+    fn get_bool(&self, i: BitVecSize) -> bool {
         let pri_ind = i.to_usize() / 8;
         let snd_ind = i.to_usize() % 8;
         let padding = if pri_ind == 0 { (self.size - 1) % 8 } else { 7 };
@@ -91,13 +91,13 @@ impl BitVec /* Operations */ {
         }
     }
     pub fn get_u8(&self, i: usize) -> u8 {
-        self.get_bool(BVSize(i)) as u8
+        self.get_bool(BitVecSize(i)) as u8
     }
     // Setters
     pub fn set(&mut self, i: usize, b: bool) {
-        self.set_bool(BVSize(i), b);
+        self.set_bool(BitVecSize(i), b);
     }
-    fn set_bool(&mut self, i: BVSize, b: bool) {
+    fn set_bool(&mut self, i: BitVecSize, b: bool) {
         let pri_ind = i.to_usize() / 8;
         let snd_ind = i.to_usize() % 8;
         let padding = if pri_ind == 0 { (self.size - 1) % 8 } else { 7 };
@@ -108,7 +108,7 @@ impl BitVec /* Operations */ {
     // Slicing
     fn concat(&self, other: &Self) -> Self {
         let bv = [self.clone().bv, other.clone().bv].concat();
-        let size = BVSize::from(ByteSize(bv.len())).to_usize();
+        let size = BitVecSize::from(ByteSize(bv.len())).to_usize();
         Self { bv, size }
     }
     pub fn extract(&self, left: usize, right: usize) -> Self {
@@ -135,7 +135,8 @@ impl BitVec /* Transform to u64 */ {
             self.clone()
         } else {
             let remain = 8 - size;
-            let zeros: BitVec = BitVec::new_with_zeros(BVSize::from(ByteSize(remain)).to_usize());
+            let zeros: BitVec =
+                BitVec::new_with_zeros(BitVecSize::from(ByteSize(remain)).to_usize());
             BitVec::concat(&zeros, &self)
         }
     }
@@ -150,7 +151,7 @@ impl BitVec /* Transform to u64 */ {
         let bytes = u.to_be_bytes();
         let bv: Vec<u8> = bytes.to_vec();
         let vec_size = bv.len();
-        let empty_bytes = vec_size - ByteSize::from(BVSize(size)).to_usize();
+        let empty_bytes = vec_size - ByteSize::from(BitVecSize(size)).to_usize();
         let bv = bv[empty_bytes..].to_vec();
         BitVec { bv, size }
     }
