@@ -1,0 +1,13 @@
+# JetBrains IDEs
+.idea
+
+# Others
+.env
+.DS_Store
+
+# Rust
+target
+**/*.rs.bk
+
+# Visual Studio Code
+.vscode
