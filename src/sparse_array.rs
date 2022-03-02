@@ -21,8 +21,7 @@ impl<'bv, T> SparseArray<'bv, T> {
         self.s.set(i);
     }
 }
-
-impl<'bv, T: Serialize + DeserializeOwned> SparseArray<'bv, T> /* Public API */ {
+impl<'bv, T> SparseArray<'bv, T> {
     pub fn new(size: usize) -> SparseArray<'bv, T> {
         let bv = Cow::Owned(BitVec::new(size));
         let r = Cow::Owned(RankSupport::new_with_index_computation(bv));
@@ -35,6 +34,8 @@ impl<'bv, T: Serialize + DeserializeOwned> SparseArray<'bv, T> /* Public API */ 
         self.set_bv_index(pos);
         self.compute_index();
     }
+}
+impl<'bv, T: Serialize + DeserializeOwned> SparseArray<'bv, T> /* Public API */ {
     pub fn get_at_rank(&self, u: usize) -> Option<&T> {
         if let Some(elem_) = self.v.get(u - 1) {
             Some(elem_)
