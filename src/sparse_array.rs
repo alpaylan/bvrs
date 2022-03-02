@@ -23,26 +23,26 @@ impl<'bv, T> SparseArray<'bv, T> {
 }
 
 impl<'bv, T: Serialize + DeserializeOwned> SparseArray<'bv, T> /* Public API */ {
-    fn new(size: usize) -> SparseArray<'bv, T> {
+    pub fn new(size: usize) -> SparseArray<'bv, T> {
         let bv = Cow::Owned(BitVec::new(size));
         let r = Cow::Owned(RankSupport::new_with_index_computation(bv));
         let s = SelectSupport::new(r);
         let v = vec![];
         SparseArray { s, v }
     }
-    fn append(&mut self, elem: T, pos: usize) {
+    pub fn append(&mut self, elem: T, pos: usize) {
         self.v.push(elem);
         self.set_bv_index(pos);
         self.compute_index();
     }
-    fn get_at_rank(&self, u: usize) -> Option<&T> {
+    pub fn get_at_rank(&self, u: usize) -> Option<&T> {
         if let Some(elem_) = self.v.get(u - 1) {
             Some(elem_)
         } else {
             None
         }
     }
-    fn get_at_index(&mut self, u: usize) -> Option<&T> {
+    pub fn get_at_index(&mut self, u: usize) -> Option<&T> {
         if self.s.r.bv.get(u) {
             let rank = self.s.rank1(u as u64);
             if let Some(elem) = self.v.get(rank as usize - 1) {
@@ -51,13 +51,13 @@ impl<'bv, T: Serialize + DeserializeOwned> SparseArray<'bv, T> /* Public API */ 
         }
         None
     }
-    fn num_elem_at(&self, u: u64) -> u64 {
+    pub fn num_elem_at(&self, u: u64) -> u64 {
         self.s.rank1(u)
     }
-    fn size(&self) -> usize {
+    pub fn size(&self) -> usize {
         self.s.get_size()
     }
-    fn num_elem(&self) -> usize {
+    pub fn num_elem(&self) -> usize {
         self.v.len()
     }
     pub fn save(&self, file_name: &str) -> std::io::Result<()> {
