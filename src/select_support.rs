@@ -1,20 +1,49 @@
+#![allow(dead_code)]
 use crate::rank_support::RankSupport;
+use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
-#[derive(Clone)]
-pub(crate) struct SelectSupport<'bv> {
+use std::fs::File;
+use std::io::{Read, Write};
+
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
+pub struct SelectSupport<'bv> {
     pub(crate) r: Cow<'bv, RankSupport<'bv>>,
 }
 
 impl<'bv> SelectSupport<'bv> {
-    pub(crate) fn new(r: Cow<'bv, RankSupport<'bv>>) -> SelectSupport<'bv> {
-        SelectSupport { r }
+    fn binary_search_select1(&self, l: usize, r: usize, i: u64) -> u64 {
+        if l == r && i == 1 {
+            return l as u64;
+        }
+        let m = ((l + r) / 2) as u64;
+        let rank_0 = self.r.rank1(m);
+        let rank_1 = self.r.rank1(m + 1);
+        if rank_0 == (i - 1) && rank_1 == i {
+            m + 1
+        } else if rank_1 < i {
+            self.binary_search_select1(m as usize, r, i)
+        } else {
+            self.binary_search_select1(l, m as usize, i)
+        }
     }
-    // pub fn compute_index(&mut self) {
-    //     self.r.compute_index();
-    // }
+    pub(in crate) fn compute_index(&mut self) {
+        self.r.to_mut().compute_index();
+    }
+    pub(in crate) fn set(&mut self, i: usize) {
+        self.r.to_mut().set(i);
+    }
+    pub(in crate) fn rank1(&self, u: u64) -> u64 {
+        self.r.rank1(u)
+    }
+    pub(in crate) fn get_size(&self) -> usize {
+        self.r.bv.size
+    }
 }
 
-impl<'bv> SelectSupport<'bv> {
+impl<'bv> SelectSupport<'bv> /* Public API */ {
+    pub fn new(r: Cow<'bv, RankSupport<'bv>>) -> SelectSupport<'bv> {
+        SelectSupport { r }
+    }
     pub fn dummy_selectn(&self, i: usize) -> Option<u64> {
         let mut select = 0;
         let mut expected_ones = i;
@@ -40,30 +69,22 @@ impl<'bv> SelectSupport<'bv> {
             Some(self.binary_search_select1(0, size, i))
         }
     }
-    pub fn binary_search_select1(&self, l: usize, r: usize, i: u64) -> u64 {
-        if l == r && i == 1 {
-            return l as u64;
-        }
-        let m = ((l + r) / 2) as u64;
-        let rank_0 = self.r.rank1(m);
-        let rank_1 = self.r.rank1(m + 1);
-        if rank_0 == (i - 1) && rank_1 == i {
-            m + 1
-        } else if rank_1 < i {
-            self.binary_search_select1(m as usize, r, i)
-        } else {
-            self.binary_search_select1(l, m as usize, i)
-        }
-    }
     pub fn overhead(self) -> usize {
         self.r.overhead()
     }
     pub fn save(&self, file_name: &str) -> std::io::Result<()> {
-        self.r.save(file_name)
+        let serialized = serde_json::to_string(&self)?;
+        let mut file = File::create(file_name)?;
+        file.write_all(serialized.as_bytes())?;
+        Ok(())
     }
-    // pub fn load(&mut self, file_name: &str) -> std::io::Result<()> {
-    //     self.r.load(file_name)
-    // }
+    pub fn load(file_name: String) -> std::io::Result<SelectSupport<'bv>> {
+        let mut file = File::open(file_name)?;
+        let mut contents = String::new();
+        file.read_to_string(&mut contents)?;
+        let deserialized: SelectSupport = serde_json::from_str(&contents)?;
+        Ok(deserialized)
+    }
 }
 
 #[cfg(test)]

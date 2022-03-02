@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::ops::Add;
@@ -91,10 +92,10 @@ impl BitVec /* Operations */ {
         self.get_bool(i) as u8
     }
     // Setters
-    pub fn set(&mut self, i: usize, b: bool) {
-        self.set_bool(i, b);
+    pub fn set(&mut self, i: usize) {
+        self.set_bool(i);
     }
-    fn set_bool(&mut self, i: usize, b: bool) {
+    pub(crate) fn set_bool(&mut self, i: usize) {
         let pri_ind = i / 8;
         let snd_ind = i % 8;
         let padding = if pri_ind == 0 { (self.size - 1) % 8 } else { 7 };

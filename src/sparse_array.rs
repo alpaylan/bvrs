@@ -1,105 +1,165 @@
+#![allow(dead_code)]
 use crate::rank_support::RankSupport;
 use crate::select_support::SelectSupport;
 use crate::BitVec;
-use std::borrow::{BorrowMut, Cow};
-use std::ops::{Deref, DerefMut};
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
+use std::fs::File;
+use std::io::{Read, Write};
 
-struct SparseArray<'bv, T> {
-    // bv: BitVec,
-    // r: RankSupport<'bv>,
+#[derive(PartialEq, Serialize, Deserialize)]
+pub struct SparseArray<'bv, T> {
     s: SelectSupport<'bv>,
     v: Vec<T>,
 }
-impl<'bv, T: Copy> SparseArray<'bv, T> {
+impl<'bv, T> SparseArray<'bv, T> {
+    fn compute_index(&mut self) {
+        self.s.compute_index();
+    }
+    fn set_bv_index(&mut self, i: usize) {
+        self.s.set(i);
+    }
+}
+
+impl<'bv, T: Serialize + DeserializeOwned> SparseArray<'bv, T> /* Public API */ {
     fn new(size: usize) -> SparseArray<'bv, T> {
         let bv = Cow::Owned(BitVec::new(size));
-        let r = Cow::Owned(RankSupport::new(bv));
+        let r = Cow::Owned(RankSupport::new_with_index_computation(bv));
         let s = SelectSupport::new(r);
         let v = vec![];
         SparseArray { s, v }
     }
-}
-
-impl<'bv, T: Copy + Deref<Target = T>> SparseArray<'bv, T> {
     fn append(&mut self, elem: T, pos: usize) {
         self.v.push(elem);
-        self.borrow_mut()
-            .s
-            .borrow_mut()
-            .r
-            .borrow_mut()
-            .bv
-            .borrow_mut();
-        self.borrow_mut().s.r.bv.set(pos, true);
+        self.set_bv_index(pos);
+        self.compute_index();
     }
-
-    fn get_at_rank(&self, u: usize, elem: &mut T) -> bool {
-        if let Some(elem_) = self.v.get(u) {
-            *elem = *elem_;
-            true
+    fn get_at_rank(&self, u: usize) -> Option<&T> {
+        if let Some(elem_) = self.v.get(u - 1) {
+            Some(elem_)
         } else {
-            false
+            None
         }
     }
-    fn get_at_index(&mut self, u: usize, elem: &mut T) -> bool {
-        let element_exists = self.s.r.bv.get(u);
-        if element_exists {
-            let rank = self.s.r.rank1(u as u64);
-            if let Some(elem_) = self.v.get(rank as usize) {
-                *elem = *(elem_);
+    fn get_at_index(&mut self, u: usize) -> Option<&T> {
+        if self.s.r.bv.get(u) {
+            let rank = self.s.rank1(u as u64);
+            if let Some(elem) = self.v.get(rank as usize - 1) {
+                return Some(elem);
             }
         }
-
-        element_exists
+        None
     }
-
     fn num_elem_at(&self, u: u64) -> u64 {
-        self.s.r.rank1(u)
+        self.s.rank1(u)
     }
-
     fn size(&self) -> usize {
-        self.s.r.bv.size
+        self.s.get_size()
     }
-
     fn num_elem(&self) -> usize {
         self.v.len()
     }
-
-    fn save(&self, fname: &String) -> std::io::Result<()> {
-        self.s.save(fname)
+    pub fn save(&self, file_name: &str) -> std::io::Result<()> {
+        let serialized = serde_json::to_string(&self)?;
+        let mut file = File::create(file_name)?;
+        file.write_all(serialized.as_bytes())?;
+        Ok(())
     }
-
-    // fn load(&mut self, fname: &String) -> std::io::Result<()> {
-    //     self.s.load(fname)
-    // }
+    pub fn load(file_name: String) -> std::io::Result<SparseArray<'bv, T>> {
+        let mut file = File::open(file_name)?;
+        let mut contents = String::new();
+        file.read_to_string(&mut contents)?;
+        let deserialized: SparseArray<'bv, T> = serde_json::from_str(&contents)?;
+        Ok(deserialized)
+    }
 }
 
 #[cfg(test)]
 mod sparse_array_tests {
-    use crate::bit_vec::BitVec;
-    use crate::rank_support::RankSupport;
-    use crate::select_support::SelectSupport;
     use crate::sparse_array::SparseArray;
+    use serde::{Deserialize, Serialize};
+    use std::string::String;
+
     #[test]
-    fn small_tests() {
-        for i in 1..=128 {
-            let size = i * 8;
-            let b = BitVec::new_with_random(size);
-            let r = RankSupport::new_with_index_computation(std::borrow::Cow::Borrowed(&b));
-            let s = SelectSupport::new(std::borrow::Cow::Borrowed(&r));
-            for j in 1..b.size {
-                let dummy_res = SelectSupport::dummy_selectn(&s, j);
-                let smart_res = s.select1(j as u64);
-                assert_eq!(
-                    dummy_res, smart_res,
-                    "<============= Case [size: {}, point: {}] Starts ==============>\n \
-                    BV = {}\n\
-                    Select = {:?}\n\
-                    Dummy Select = {:?}\n\
-                    <============= Case [size: {}, point: {}] Ends ==============>\n",
-                    size, j, b, smart_res, dummy_res, size, j
-                );
-            }
+    fn single_element_get_at_index_tests() {
+        for i in 1..=32 {
+            let size = i * 32;
+            let mut sa: SparseArray<String> = SparseArray::new(size);
+            sa.append("alp".to_owned(), 3);
+            let res = sa.get_at_index(3).unwrap();
+            assert_eq!(*res, "alp".to_owned());
         }
+    }
+    #[test]
+    fn fail_get_at_index_tests() {
+        for i in 1..=32 {
+            let size = i * 32;
+            let mut sa: SparseArray<String> = SparseArray::new(size);
+            sa.append("alp".to_owned(), 3);
+            let res = sa.get_at_index(4);
+            assert_eq!(res, None);
+        }
+    }
+    #[test]
+    fn single_element_get_at_rank_tests() {
+        for i in 1..=32 {
+            let size = i * 32;
+            let mut sa: SparseArray<String> = SparseArray::new(size);
+            sa.append("alp".to_owned(), 3);
+            let res = sa.get_at_rank(1).unwrap();
+            assert_eq!(*res, "alp".to_owned());
+        }
+    }
+    #[test]
+    fn fail_get_at_rank_tests() {
+        for i in 1..=32 {
+            let size = i * 32;
+            let mut sa: SparseArray<String> = SparseArray::new(size);
+            sa.append("alp".to_owned(), 3);
+            let res = sa.get_at_rank(2);
+            assert_eq!(res, None);
+        }
+    }
+
+    #[test]
+    fn test_generic_construction() {
+        #[derive(PartialEq, Debug, Serialize, Deserialize)]
+        struct Point {
+            x: i64,
+            y: i64,
+        }
+        for i in 1..=32 {
+            let size = i * 32;
+            let mut sa: SparseArray<Point> = SparseArray::new(size);
+            sa.append(Point { x: 3, y: -4 }, 3);
+            let res = sa.get_at_index(3).unwrap();
+            assert_eq!(*res, Point { x: 3, y: -4 });
+        }
+        for i in 1..=32 {
+            let size = i * 32;
+            let mut sa: SparseArray<Point> = SparseArray::new(size);
+            sa.append(Point { x: 3, y: -4 }, 3);
+            let res = sa.get_at_index(4);
+            assert_eq!(res, None);
+        }
+    }
+
+    #[test]
+    fn test_generic_save_load() -> std::io::Result<()> {
+        #[derive(PartialEq, Debug, Serialize, Deserialize)]
+        struct Point {
+            x: i64,
+            y: i64,
+        }
+        let size = 128;
+        let mut sa: SparseArray<Point> = SparseArray::new(size);
+        sa.append(Point { x: 3, y: -4 }, 3);
+        sa.save("example_sparse_array.txt")?;
+        let mut sa2: SparseArray<Point> =
+            SparseArray::load("example_sparse_array.txt".to_owned()).unwrap();
+        let res = sa2.get_at_index(3).unwrap();
+        assert_eq!(*res, Point { x: 3, y: -4 });
+        Ok(())
     }
 }
