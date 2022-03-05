@@ -2,23 +2,15 @@ use bvrs::SparseArray;
 use bvrs::*;
 use criterion::{criterion_group, BenchmarkId, Criterion, PlotConfiguration};
 use rand;
+use rand::distributions::{Distribution, Standard};
 use rand::Rng;
 use std::collections::HashSet;
 
-pub trait SparseArrayElement<T> {
-    fn gen_elem() -> T;
-}
-
-impl SparseArrayElement<u64> for u64 {
-    fn gen_elem() -> u64 {
-        let mut rng = rand::thread_rng();
-        rng.gen::<u64>()
-    }
-}
-pub fn create_sparse_array_elements<T: SparseArrayElement<T>>(
-    size: usize,
-    sparsity: f64,
-) -> Vec<(usize, T)> {
+fn create_sparse_array_elements<Element>(size: usize, sparsity: f64) -> Vec<(usize, Element)>
+where
+    Element: Copy,
+    Standard: Distribution<Element>,
+{
     let actual_size = (size as f64 * sparsity) as usize;
     let mut positions_hashset: HashSet<usize> =
         std::collections::HashSet::with_capacity(actual_size);
@@ -28,37 +20,33 @@ pub fn create_sparse_array_elements<T: SparseArrayElement<T>>(
     }
     let mut positions: Vec<usize> = positions_hashset.into_iter().map(|x| x).collect();
     positions.sort();
-    let mut elements: Vec<(usize, T)> = vec![];
+    let mut elements = vec![];
     for i in positions {
-        elements.push((i, T::gen_elem()));
+        elements.push((i, rand::random()));
     }
     elements
 }
 
-pub fn create_sparse_array<T: SparseArrayElement<T>>(
-    elements: Vec<(usize, T)>,
-) -> SparseArray<'static, T> {
+pub fn create_sparse_array<T: Copy>(elements: &[(usize, T)]) -> SparseArray<'static, T> {
     let mut sparse_array: SparseArray<T> = SparseArray::new(elements.len());
     for (pos, elem) in elements {
-        sparse_array.append(elem, pos);
+        sparse_array.append(*elem, *pos);
     }
     sparse_array
 }
 
 pub fn benchmark(criterion: &mut Criterion) {
-    let mut group = criterion.benchmark_group("Rank");
+    let mut group = criterion.benchmark_group("Generate Sparse Array");
     group.plot_config(PlotConfiguration::default());
 
-    for size in (1..=10).map(|i| i * i * i * 8).collect::<Vec<usize>>() {
-        for sparsity in (1..=5)
-            .map(|i| (i * i * i) as f64 * 0.01)
-            .collect::<Vec<f64>>()
-        {
+    for size in (4..=16).map(|i| i * i * i * 8) {
+        for sparsity in [0.01, 0.03, 0.05, 0.1] {
             let elements: Vec<(usize, u64)> = create_sparse_array_elements(size, sparsity);
-            group.bench_function(
-                BenchmarkId::new("size", format!("({}, {})", size, sparsity)),
-                |bencher| {
-                    bencher.iter(|| create_sparse_array(criterion::black_box(elements.clone())));
+            group.bench_with_input(
+                BenchmarkId::new(format!("Sparsity={}", sparsity), &size),
+                &size,
+                |bencher, _| {
+                    bencher.iter(|| create_sparse_array(criterion::black_box(&elements)));
                 },
             );
         }
