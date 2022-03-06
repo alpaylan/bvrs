@@ -1,14 +1,13 @@
-// pub mod group;
-// pub mod single;
-// pub mod sparse_array_generation;
+mod rank_support;
+mod select_support;
 mod sparse_array;
 
-use sparse_array::index;
-// use sparse_array::rank;
 criterion::criterion_main! {
-    // group::benches,
-    // single::benches,
-    // sparse_array_generation::benches,
-    // rank::benches,
-    index::benches
+//     sparse_array::generation::benches,
+//     sparse_array::rank::benches,
+//     sparse_array::index::benches,
+    // rank_support::generation::benches,
+    rank_support::rank::benches,
+    rank_support::dummy_rank::benches,
+    select_support::select::benches,
 }

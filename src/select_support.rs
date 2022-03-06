@@ -61,6 +61,9 @@ impl<'bv> SelectSupport<'bv> /* Public API */ {
         }
     }
     pub fn select1(&self, i: u64) -> Option<u64> {
+        if i == 0 {
+            return None;
+        }
         let size = self.r.bv.size;
         let max_rank = self.r.rank1(self.r.bv.size as u64 - 1);
         if i > max_rank {
