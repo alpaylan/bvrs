@@ -21,7 +21,7 @@ impl<'bv, T> SparseArray<'bv, T> {
         self.s.set(i);
     }
 }
-impl<'bv, T> SparseArray<'bv, T> {
+impl<'bv, T> SparseArray<'bv, T> /* Public API */ {
     pub fn new(size: usize) -> SparseArray<'bv, T> {
         let bv = Cow::Owned(BitVec::new(size));
         let r = Cow::Owned(RankSupport::new_with_index_computation(bv));
@@ -34,8 +34,6 @@ impl<'bv, T> SparseArray<'bv, T> {
         self.set_bv_index(pos);
         self.compute_index();
     }
-}
-impl<'bv, T: Serialize + DeserializeOwned> SparseArray<'bv, T> /* Public API */ {
     pub fn get_at_rank(&self, u: usize) -> Option<&T> {
         if let Some(elem_) = self.v.get(u - 1) {
             Some(elem_)
@@ -43,7 +41,7 @@ impl<'bv, T: Serialize + DeserializeOwned> SparseArray<'bv, T> /* Public API */ 
             None
         }
     }
-    pub fn get_at_index(&mut self, u: usize) -> Option<&T> {
+    pub fn get_at_index(&self, u: usize) -> Option<&T> {
         if self.s.r.bv.get(u) {
             let rank = self.s.rank1(u as u64);
             if let Some(elem) = self.v.get(rank as usize - 1) {
@@ -61,6 +59,8 @@ impl<'bv, T: Serialize + DeserializeOwned> SparseArray<'bv, T> /* Public API */ 
     pub fn num_elem(&self) -> usize {
         self.v.len()
     }
+}
+impl<'bv, T: Serialize + DeserializeOwned> SparseArray<'bv, T> /* File System API */ {
     pub fn save(&self, file_name: &str) -> std::io::Result<()> {
         let serialized = serde_json::to_string(&self)?;
         let mut file = File::create(file_name)?;
