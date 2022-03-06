@@ -2,6 +2,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage{svg}
 \usepackage{amsmath}
+\usepackage{hyperref}
 \usepackage[margin=2cm]{geometry}
 \title{CMSC858 Project 1 Report}
 \author{Alperen Keles }
@@ -12,7 +13,11 @@
 \maketitle
 
 \section*{Introduction}
-In this project, I implemented a BitVector implementation, used it for implementing Rank \& Select data structures, which are very useful succint data structures for indexing and querying large amounts of data efficiently. I then implemented an efficient generic Sparse Array using these primitives. 
+In this project, I implemented a BitVector implementation, used it for implementing Rank \& Select data structures, which are very useful succint data structures for indexing and querying large amounts of data efficiently. I then implemented an efficient generic Sparse Array using these primitives.
+\section*{Website}
+Github and crates.io page of the project can be found below. \\
+\textbf{Github: } \hyperlink{https://github.com/alpaylan/bvrs}{https://github.com/alpaylan/bvrs} \\
+\textbf{Crates.io: } \hyperlink{https://crates.io/crates/bvrs/0.1.0}{https://crates.io/crates/bvrs/0.1.0}
 \section*{Difficulties}
 I had a set of problems.
 \begin{itemize}
@@ -34,7 +39,7 @@ This sections has the results and their short discussions.
 \end{figure}
 
 \subsubsection*{Discussion}
-This graphic is linearly growing as expected. Generation of superblock/blocks and lookup tables take linear time with respect to the size of the bitvector. 
+This graphic is linearly growing as expected. Generation of superblock/blocks and lookup tables take linear time with respect to the size of the bitvector.
 
 \newpage
 
@@ -50,7 +55,7 @@ This graphic is linearly growing as expected. Generation of superblock/blocks an
 \end{figure}
 
 \subsubsection*{Discussion}
-Size of rank data structure follows a $o(N)$ pattern as we theoretically expected. For small values of $N$, fixed overhead might be too much because as opposed to theoretical data structures Rust structs carry metadata, but as we go forward with larger values of $N$, we see structure starts to take less and less space compared to the bitvector size. 
+Size of rank data structure follows a $o(N)$ pattern as we theoretically expected. For small values of $N$, fixed overhead might be too much because as opposed to theoretical data structures Rust structs carry metadata, but as we go forward with larger values of $N$, we see structure starts to take less and less space compared to the bitvector size.
 \newpage
 
 \subsection*{Bitvec Size vs Rank1 Time}
@@ -62,7 +67,7 @@ Size of rank data structure follows a $o(N)$ pattern as we theoretically expecte
     \label{fig:my_label}
 \end{figure}
 \subsubsection*{Discussion}
-This graphic shows our \texttt{rank1} operation is indeed almost constant, is depends very little, and that's due to the implementation of \texttt{BitVector Extraction} function, which if I tried to write efficiently would be out of scope of this homework, and I knew the size would be bounded hence theoretical constant bounds are not broken. 
+This graphic shows our \texttt{rank1} operation is indeed almost constant, is depends very little, and that's due to the implementation of \texttt{BitVector Extraction} function, which if I tried to write efficiently would be out of scope of this homework, and I knew the size would be bounded hence theoretical constant bounds are not broken.
 \newpage
 
 \subsection*{Bitvec Size vs RankN Time}
@@ -74,7 +79,7 @@ This graphic shows our \texttt{rank1} operation is indeed almost constant, is de
     \label{fig:my_label}
 \end{figure}
 \subsubsection*{Discussion}
-This is the graph of linear time rank operation. It was used as a baseline, ground truth for tests, and also used in the generation of the lookup table. It grows linearly as expected. 
+This is the graph of linear time rank operation. It was used as a baseline, ground truth for tests, and also used in the generation of the lookup table. It grows linearly as expected.
 \newpage
 
 
@@ -87,7 +92,7 @@ This is the graph of linear time rank operation. It was used as a baseline, grou
     \label{fig:my_label}
 \end{figure}
 \subsubsection*{Discussion}
-This graphic shows our \texttt{select1} operation is indeed logarithmic. It grows fast at the beginning, yet increase in the time slows down after we reach around 10000 bits. 
+This graphic shows our \texttt{select1} operation is indeed logarithmic. It grows fast at the beginning, yet increase in the time slows down after we reach around 10000 bits.
 \newpage
 
 \subsection*{Sparse Array Generation(Time)}
@@ -99,7 +104,7 @@ This graphic shows our \texttt{select1} operation is indeed logarithmic. It grow
     \label{fig:my_label}
 \end{figure}
 \subsubsection*{Discussion}
-This is the graphic showing how different size/sparsity levels affect generation of a Sparse Array. Affect of size is as expected, linear. Sparsity could be a more surprising result, but this is due to dynamic nature of sparse arrays. Each append operation requires the index to be computed again, which means it takes more time to build the index simply when we do it more times. 
+This is the graphic showing how different size/sparsity levels affect generation of a Sparse Array. Affect of size is as expected, linear. Sparsity could be a more surprising result, but this is due to dynamic nature of sparse arrays. Each append operation requires the index to be computed again, which means it takes more time to build the index simply when we do it more times.
 \newpage
 
 
@@ -123,7 +128,7 @@ Then comes our conclusions. \\
     \label{fig:my_label}
 \end{figure}
 \subsubsection*{Discussion}
-For this function, I rely on random access over the vector. Hence, it's so low(on the order of picoseconds) on time. I believe the fluctuations are due to me using my computer, while holding the experiments. 
+For this function, I rely on random access over the vector. Hence, it's so low(on the order of picoseconds) on time. I believe the fluctuations are due to me using my computer, while holding the experiments.
 \newpage
 
 \subsection*{Sparse Array Index(Time)}
@@ -135,7 +140,7 @@ For this function, I rely on random access over the vector. Hence, it's so low(o
     \caption{Sparse Array Size/Sparsity vs Time for 1000 Index Queries Graph}
 \end{figure}
 \subsubsection*{\subsubsection*{Discussion}}
-For this function, I rely on the rank function of \texttt{rank\_support} structure. I believe that the fluctuations are again to due me using my computer while holding the experiments and also the order being very low again(microseconds) so it's easily disturbed. Yet, we see a significant impact from sparsity, this is due to empty accesses. For empty position accesses, we don't need to do any query, which as I mentioned very close to constant yet not really constant due to \texttt{extract} function. 
+For this function, I rely on the rank function of \texttt{rank\_support} structure. I believe that the fluctuations are again to due me using my computer while holding the experiments and also the order being very low again(microseconds) so it's easily disturbed. Yet, we see a significant impact from sparsity, this is due to empty accesses. For empty position accesses, we don't need to do any query, which as I mentioned very close to constant yet not really constant due to \texttt{extract} function.
 \newpage
 
 
