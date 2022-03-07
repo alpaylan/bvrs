@@ -8,7 +8,7 @@
 
 This library was written as part of CMSC858D - Algorithms, Data Structures and Inference for High-throughput Genomics Class Homework.
 
-The official version of the library is hosted on github at this [repository](https://github.com/alpaylan/bvrs), while crates.io version is hosted at this [page](https://crates.io/crates/bvrs/0.1.0).
+The official version of the library is hosted on github at this [repository](https://github.com/alpaylan/bvrs), while crates.io version is hosted at this [page](https://crates.io/crates/bvrs/).
 
 ## Installation
 
